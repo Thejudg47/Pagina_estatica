@@ -1,0 +1,23 @@
+# --- Archivos compilados y caché de Reflex ---
+.web/
+*.db
+*.sqlite
+
+# --- Entornos virtuales y paquetes de Python ---
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# --- Variables de entorno y secretos ---
+.env
+.env.local
+
+# --- Archivos del sistema operativo y editores ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
