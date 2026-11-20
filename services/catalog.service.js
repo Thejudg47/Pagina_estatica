@@ -38,7 +38,6 @@ export class CatalogService {
     const rows = this._parseCsvRows(csvText);
     if (rows.length < 2) return [];
 
-    // Normalizar encabezados (minúsculas y sin espacios)
     const headers = rows[0].map((h) => h.trim().toLowerCase());
     const products = [];
 
@@ -51,13 +50,14 @@ export class CatalogService {
         record[header] = (row[idx] || "").trim();
       });
 
-      // Filtrar no disponibles (acepta "si", "sí", "true", "1" o vacío por defecto)
-      const dispRaw = (record.disponible || "si").toLowerCase();
+      const dispRaw = (record.disponible || "true").toLowerCase();
       const disponible = !["no", "false", "0"].includes(dispRaw);
       if (!disponible) continue;
 
       const id = record.id || `prod-${i}`;
-      const imagenes = this._resolveImages(record.imagen || record.imagenes || "", id);
+      // Lee exactamente la columna imagen_url de tu tabla
+      const rawImg = record.imagen_url || record.imagenes || record.imagen || "";
+      const imagenes = this._resolveImages(rawImg, id);
 
       products.push(
         createProductoDTO({
@@ -160,7 +160,12 @@ export class CatalogService {
       return `${TIENDA_CONFIG.rutaImagenesLocal}${url}`;
     }
 
-    // Detecta formatos: /file/d/ID/view o ?id=ID
+    // Si tu Apps Script ya generó el enlace lh3.googleusercontent.com, lo usamos directo
+    if (url.includes("lh3.googleusercontent.com")) {
+      return url;
+    }
+
+    // Si alguien pega un enlace normal de Google Drive, lo convertimos también
     const fileIdMatch =
       url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
       url.match(/[?&]id=([a-zA-Z0-9_-]+)/);

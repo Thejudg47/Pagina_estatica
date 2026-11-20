@@ -18,7 +18,7 @@
 /**
  * Crea y normaliza un ProductDTO válido.
  * @param {Partial<ProductoDTO>} raw
- * @returns {ProductDTO}
+ * @returns {ProductoDTO}
  */
 export function createProductoDTO(raw) {
   return {
