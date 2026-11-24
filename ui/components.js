@@ -136,6 +136,21 @@ export function renderCatalog(productos, cargando) {
     })
     .join("");
 
+  const hasVariants = p.variantes && p.variantes.length > 0;
+  const displayPrice = hasVariants
+    ? Math.min(...p.variantes.map((v) => v.precio))
+    : p.precio;
+  const priceLabel = hasVariants ? "Desde" : "Precio";
+  const actionBtn = hasVariants
+    ? `<button class="btn-primary" data-action="open-modal" data-id="${p.id}">
+          <i data-lucide="sliders-horizontal" style="width:16px;height:16px;"></i>
+          Elegir tamaño
+        </button>`
+    : `<button class="btn-primary" data-action="add-to-cart" data-id="${p.id}">
+          <i data-lucide="shopping-bag" style="width:16px;height:16px;"></i>
+          Agregar
+        </button>`;
+
   return `<div class="products-grid">${cardsHtml}</div>`;
 }
 
@@ -167,10 +182,10 @@ export function renderCartDrawer(state, totales) {
           <div style="font-size:12px;color:var(--texto-gris);">${pricing.formatCurrency(item.precioUnitario)} c/u</div>
         </div>
         <div class="qty-controls">
-          <button class="qty-btn" data-action="dec-qty" data-id="${item.productId}">-</button>
+          <button class="qty-btn" data-action="dec-qty" data-key="${item.cartKey}">-</button>
           <span style="font-weight:700;min-width:18px;text-align:center;">${item.cantidad}</span>
-          <button class="qty-btn" data-action="inc-qty" data-id="${item.productId}">+</button>
-          <button class="icon-btn" data-action="remove-item" data-id="${item.productId}" title="Eliminar">
+          <button class="qty-btn" data-action="inc-qty" data-key="${item.cartKey}">+</button>
+          <button class="icon-btn" data-action="remove-item" data-key="${item.cartKey}" title="Eliminar">
             <i data-lucide="trash-2" style="width:15px;height:15px;color:#dc2626;"></i>
           </button>
         </div>
@@ -251,10 +266,16 @@ export function renderCartDrawer(state, totales) {
   `;
 }
 
-export function renderProductModal(producto, imagenActivaIdx) {
+export function renderProductModal(producto, imagenActivaIdx, varianteActivaIdx = 0) {
   if (!producto) return "";
 
   const imgActual = producto.imagenes[imagenActivaIdx] || producto.imagenes[0];
+  const hasVariants = producto.variantes && producto.variantes.length > 0;
+  const activeVariant = hasVariants
+    ? producto.variantes[varianteActivaIdx] || producto.variantes[0]
+    : null;
+  const precioMostrado = activeVariant ? activeVariant.precio : producto.precio;
+
   const thumbsHtml =
     producto.imagenes.length > 1
       ? `<div class="modal-thumbs">${producto.imagenes
@@ -272,6 +293,30 @@ export function renderProductModal(producto, imagenActivaIdx) {
           .join("")}</div>`
       : "";
 
+  const variantsHtml = hasVariants
+    ? `
+      <div class="variant-section">
+        <span class="variant-label">Selecciona el tamaño:</span>
+        <div class="variant-options">
+          ${producto.variantes
+            .map(
+              (v, idx) => `
+              <button
+                type="button"
+                class="variant-btn ${idx === varianteActivaIdx ? "active" : ""}"
+                data-action="select-variant"
+                data-index="${idx}"
+              >
+                ${v.nombre} — ${pricing.formatCurrency(v.precio)}
+              </button>
+            `
+            )
+            .join("")}
+        </div>
+      </div>
+    `
+    : "";
+
   return `
     <div class="modal-backdrop" data-action="close-modal-backdrop">
       <div class="modal-card">
@@ -286,10 +331,11 @@ export function renderProductModal(producto, imagenActivaIdx) {
         <div style="margin-top:18px;display:flex;flex-direction:column;gap:10px;">
           <h2 style="font-size:28px;">${producto.nombre}</h2>
           <p style="color:var(--texto-gris);line-height:1.6;">${producto.descripcion}</p>
+          ${variantsHtml}
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:14px;border-top:1px solid var(--borde-suave);">
             <div>
               <span class="price-label">Precio</span>
-              <span class="price-value" style="font-size:24px;">${pricing.formatCurrency(producto.precio)}</span>
+              <span class="price-value" style="font-size:24px;">${pricing.formatCurrency(precioMostrado)}</span>
               <span class="price-currency">${TIENDA_CONFIG.moneda}</span>
             </div>
             <button class="btn-primary" data-action="add-to-cart-modal" data-id="${producto.id}" style="padding:12px 24px;">

@@ -6,6 +6,28 @@ export class CatalogService {
    * Obtiene todos los productos disponibles desde Google Sheets (CSV).
    * @returns {Promise<import("../contracts/types.js").ProductoDTO[]>}
    */
+
+  /**
+   * Parsea cadenas tipo "Chico:750, Mediano:1250, Grande:1800"
+   * @param {string} rawVariants
+   */
+
+  _parseVariants(rawVariants) {
+    if (!rawVariants || !rawVariants.trim()) return [];
+
+    return rawVariants
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        const [namePart, pricePart] = entry.split(":");
+        const nombre = (namePart || "").trim();
+        const precio = this._parsePrice(pricePart);
+        return nombre && precio > 0 ? { nombre, precio } : null;
+      })
+      .filter(Boolean);
+  }
+
   async getAllProducts() {
     const csvUrl = TIENDA_CONFIG.googleSheetsCsvUrl?.trim();
     if (!csvUrl || csvUrl === "TU_ENLACE_CSV_DE_GOOGLE_SHEETS_AQUI") {
@@ -59,6 +81,8 @@ export class CatalogService {
       const rawImg = record.imagen_url || record.imagenes || record.imagen || "";
       const imagenes = this._resolveImages(rawImg, id);
 
+      const variantes = this._parseVariants(record.variantes || record.tamanos || "");
+
       products.push(
         createProductoDTO({
           id,
@@ -69,6 +93,7 @@ export class CatalogService {
           imagenes,
           etiqueta: record.etiqueta,
           disponible: true,
+          variantes,
         })
       );
     }

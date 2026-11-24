@@ -33,6 +33,7 @@ const state = {
   horarioEntrega: TIENDA_CONFIG.horariosEntrega[0],
   dedicatoria: "",
   errorCheckout: "",
+  varianteModalIdx: 0,
 };
 
 function applyThemeConfig() {
@@ -93,7 +94,8 @@ function renderAll() {
   document.getElementById("app-cart-drawer").innerHTML = renderCartDrawer(state, totales);
   document.getElementById("app-product-modal").innerHTML = renderProductModal(
     state.productoModal,
-    state.imagenModalIdx
+    state.imagenModalIdx,
+    state.varianteModalIdx,
   );
 
   // Re-inicializar iconos de Lucide tras cada render
@@ -132,27 +134,38 @@ document.addEventListener("click", (e) => {
   if (action === "add-to-cart" || action === "add-to-cart-modal") {
     const prod = state.productos.find((p) => p.id === id);
     if (!prod) return;
-    const existing = state.carrito.find((i) => i.productId === id);
+
+    const hasVariants = prod.variantes && prod.variantes.length > 0;
+    const selectedVariant = hasVariants
+      ? prod.variantes[action === "add-to-cart-modal" ? state.varianteModalIdx : 0]
+      : null;
+
+    const newItem = createCartItemDTO(prod, 1, selectedVariant);
+    const existing = state.carrito.find((i) => i.cartKey === newItem.cartKey);
+
     if (existing) {
       existing.cantidad += 1;
     } else {
-      state.carrito.push(createCartItemDTO(prod, 1));
+      state.carrito.push(newItem);
     }
+
     saveCart();
     if (action === "add-to-cart-modal") state.productoModal = null;
     renderAll();
-    showToast(`¡${prod.nombre} agregado a tu pedido!`);
+    showToast(`¡${newItem.nombre} agregado a tu pedido!`);
   }
 
   if (action === "inc-qty") {
-    const item = state.carrito.find((i) => i.productId === id);
+    const key = target.dataset.key;
+    const item = state.carrito.find((i) => i.cartKey === key);
     if (item) item.cantidad += 1;
     saveCart();
     renderAll();
   }
 
   if (action === "dec-qty") {
-    const idx = state.carrito.findIndex((i) => i.productId === id);
+    const key = target.dataset.key;
+    const idx = state.carrito.findIndex((i) => i.cartKey === key);
     if (idx !== -1) {
       if (state.carrito[idx].cantidad > 1) {
         state.carrito[idx].cantidad -= 1;
@@ -165,7 +178,8 @@ document.addEventListener("click", (e) => {
   }
 
   if (action === "remove-item") {
-    state.carrito = state.carrito.filter((i) => i.productId !== id);
+    const key = target.dataset.key;
+    state.carrito = state.carrito.filter((i) => i.cartKey !== key);
     saveCart();
     renderAll();
   }
@@ -173,6 +187,7 @@ document.addEventListener("click", (e) => {
   if (action === "open-modal") {
     state.productoModal = state.productos.find((p) => p.id === id) || null;
     state.imagenModalIdx = 0;
+    state.varianteModalIdx = 0;
     renderAll();
   }
 
@@ -190,6 +205,12 @@ document.addEventListener("click", (e) => {
     state.imagenModalIdx = Number(target.dataset.index || 0);
     renderAll();
   }
+
+  if (action === "select-variant") {
+    state.varianteModalIdx = Number(target.dataset.index || 0);
+    renderAll();
+  }
+
 
   if (action === "checkout-whatsapp") {
     const totales = pricingService.calculateTotals(state.carrito, state.zonaEnvio);
